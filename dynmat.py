@@ -30,8 +30,7 @@ outcar.write("""
 outcar.close()
 
 # Al3 DYNMAT
-dynmat = open('DYNMAT', 'w')
-dynmat.write(""" 1    3    1
+al3_dynmat = """ 1    3    1
  26.982
     1    1  0.0100  0.0000  0.0000
   0.007818   0.000000   0.000000
@@ -44,30 +43,32 @@ dynmat.write(""" 1    3    1
     1    3  0.0000  0.0000  0.0100
   0.000000   0.000000  -0.032470
   0.000000   0.000000   0.000000
-  0.000000   0.000000   0.000000""")
-dynmat.close()
+  0.000000   0.000000   0.000000"""
 
-# UW/SI2 phonon_vac1_w4
-#    2  5    3
-#  63.546 196.966
-#   3    1  0.0500  0.0000  0.0000
-#  0.000000   0.000000   0.000000
-#  0.000000   0.000000   0.000000
-# -0.297585   0.055901   0.000000
-#  0.000000   0.000000   0.000000
-#  0.000000   0.000000   0.000000
-#   3    2  0.0000  0.0500  0.0000
-#  0.000000   0.000000   0.000000
-#  0.000000   0.000000   0.000000
-#  0.055046  -0.298080   0.000000
-#  0.000000   0.000000   0.000000
-#  0.000000   0.000000   0.000000
-#   3    3  0.0000  0.0000  0.0500
-#  0.000000   0.000000   0.000000
-#  0.000000   0.000000   0.000000
-# -0.000623  -0.000623  -0.347529
-#  0.000000   0.000000   0.000000
-#  0.000000   0.000000   0.000000
+# UW/SI2 phonon_vac1_w4 DYNMAT
+uwsi2_dynmat = """ 2  6    3
+  63.546 196.966
+   4    1  0.0500  0.0000  0.0000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+ -0.297585   0.055901   0.000000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+   4    2  0.0000  0.0500  0.0000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+  0.055046  -0.298080   0.000000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+   4    3  0.0000  0.0000  0.0500
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000
+ -0.000623  -0.000623  -0.347529
+  0.000000   0.000000   0.000000
+  0.000000   0.000000   0.000000"""
 
 # from OUTCAR
 # https://github.com/raman-sc/VASP/blob/master/vasp_raman.py
@@ -86,16 +87,20 @@ for i in range(nat):
         eigvec = [ float(tmp[x]) for x in range(3,6) ]
     norm = math.sqrt( sum( [abs(x)**2 for x in eigvec] ) )
 outcar_fh.close()
+
 # from DYNMAT
-vpc = VaspChecker(name = "dynamics")
-dynmat_dict = vpc.read_my_dynamical_matrix_file('.')
-numspec = dynmat_dict['numspec']
-VaspToCm = 521.47083
-conversion_factor_to_THz = 15.633302
-for i in range(nat):
-    r = dynmat_dict['atoms'][numspec][i+1]['dynmat'][numspec-1]
-    eigvec = map(float, r.split())
-    frequencies = np.sqrt(np.abs(np.array(eigvec))) *1000. #* VaspToCm
-    frequency = math.sqrt( sum( [abs(x)**2 for x in frequencies] ) )
-    print eigvec, frequency, eigval[i]/frequency
-    #print frequencies * conversion_factor_to_THz
+def from_dynmat(dynmat_str):
+    dynmat = open('DYNMAT', 'w')
+    dynmat.write(dynmat_str)
+    dynmat.close()
+    vpc = VaspChecker(name = "dynamics")
+    dynmat_dict = vpc.read_my_dynamical_matrix_file('.')
+    for k,v0 in dynmat_dict['atoms'].iteritems():
+        for v1 in v0.itervalues():
+            eigvec = map(float, v1['dynmat'][k-1].split())
+            frequencies = np.sqrt(np.abs(np.array(eigvec))) *1000.
+            frequency = math.sqrt( sum( [abs(x)**2 for x in frequencies] ) )
+            print eigvec, frequency#, eigval[i]/frequency
+
+from_dynmat(al3_dynmat)
+from_dynmat(uwsi2_dynmat)
