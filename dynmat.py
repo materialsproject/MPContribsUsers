@@ -50,19 +50,19 @@ dynmat.close()
 # UW/SI2 phonon_vac1_w4
 #    2  5    3
 #  63.546 196.966
-#   12    1  0.0500  0.0000  0.0000
+#   3    1  0.0500  0.0000  0.0000
 #  0.000000   0.000000   0.000000
 #  0.000000   0.000000   0.000000
 # -0.297585   0.055901   0.000000
 #  0.000000   0.000000   0.000000
 #  0.000000   0.000000   0.000000
-#   12    2  0.0000  0.0500  0.0000
+#   3    2  0.0000  0.0500  0.0000
 #  0.000000   0.000000   0.000000
 #  0.000000   0.000000   0.000000
 #  0.055046  -0.298080   0.000000
 #  0.000000   0.000000   0.000000
 #  0.000000   0.000000   0.000000
-#   12    3  0.0000  0.0000  0.0500
+#   3    3  0.0000  0.0000  0.0500
 #  0.000000   0.000000   0.000000
 #  0.000000   0.000000   0.000000
 # -0.000623  -0.000623  -0.347529
@@ -73,30 +73,29 @@ dynmat.close()
 # https://github.com/raman-sc/VASP/blob/master/vasp_raman.py
 nat = 3 # TODO
 outcar_fh = open('OUTCAR', 'r')
-for i in range(nat): # TODO nat*3?
+eigval = []
+for i in range(nat):
     outcar_fh.readline() # empty line
     p = re.search(r'^\s*(\d+).+?([\.\d]+) cm-1', outcar_fh.readline())
-    print float(p.group(2)) # eigval
+    eigval.append(float(p.group(2)))
     outcar_fh.readline() #  X Y ...
-    eigvec = []
+    eigvec = None
     for j in range(nat):
         tmp = outcar_fh.readline().split()
-        eigvec.append([ float(tmp[x]) for x in range(3,6) ])
-    print np.array(eigvec)
-    print math.sqrt( sum( [abs(x)**2 for sublist in eigvec for x in sublist] ) )
+        if eigvec is not None and sum(eigvec) > 0.: continue
+        eigvec = [ float(tmp[x]) for x in range(3,6) ]
+    norm = math.sqrt( sum( [abs(x)**2 for x in eigvec] ) )
 outcar_fh.close()
 # from DYNMAT
 vpc = VaspChecker(name = "dynamics")
 dynmat_dict = vpc.read_my_dynamical_matrix_file('.')
+numspec = dynmat_dict['numspec']
+VaspToCm = 521.47083
+conversion_factor_to_THz = 15.633302
 for i in range(nat):
-    eigvec = []
-    for r in dynmat_dict['atoms'][1][i+1]['dynmat']:
-            eigvec.append(map(float, r.split()))
-    eigvec = np.array(eigvec)
-    norm = math.sqrt( sum( [abs(x)**2 for sublist in eigvec for x in sublist] ) )
-    print eigvec
-    print norm
-    #frequencies = np.sqrt(np.abs(-0.03247)) * np.sign(-0.03247)
-    #print frequencies
-    #conversion_factor_to_THz = 15.633302
+    r = dynmat_dict['atoms'][numspec][i+1]['dynmat'][numspec-1]
+    eigvec = map(float, r.split())
+    frequencies = np.sqrt(np.abs(np.array(eigvec))) *1000. #* VaspToCm
+    frequency = math.sqrt( sum( [abs(x)**2 for x in frequencies] ) )
+    print eigvec, frequency, eigval[i]/frequency
     #print frequencies * conversion_factor_to_THz
