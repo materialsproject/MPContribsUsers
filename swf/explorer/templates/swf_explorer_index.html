@@ -39,7 +39,7 @@
         <div class="col-md-6">
             <div id="graph1"></div>
             <script>
-            requirejs(['main'], function() {
+            requirejs(['config'], function() {
                 require(["plotly"], function(Plotly) {
                     $(document).ready(function(){
                         var table = window.tables[window.tables.length-1];
@@ -230,7 +230,7 @@
         <div class="col-md-6">
             <div id="graph2"></div>
             <script>
-            requirejs(['main'], function() {
+            requirejs(['config'], function() {
                 require(["plotly"], function(Plotly) {
                     $(document).ready(function(){
                         var table = window.tables[window.tables.length-1];
