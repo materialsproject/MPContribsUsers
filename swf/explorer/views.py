@@ -6,7 +6,7 @@ from django.template import RequestContext
 from mpcontribs.rest.views import get_endpoint
 from mpcontribs.io.core.components import render_dataframe
 from mpcontribs.io.core.recdict import render_dict
-from materials_django.settings import STATIC_URL
+from test_site.settings import STATIC_URL
 from ..rest.rester import SWFRester
 
 def index(request):
