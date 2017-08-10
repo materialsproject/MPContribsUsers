@@ -7,7 +7,7 @@ from mpcontribs.rest.views import get_endpoint
 from mpcontribs.io.core.components import render_dataframe
 from mpcontribs.io.core.recdict import render_dict
 from test_site.settings import STATIC_URL
-from ..rest.rester import SWFRester
+from ..rest.rester import SwfRester
 
 def index(request):
     ctx = RequestContext(request)
