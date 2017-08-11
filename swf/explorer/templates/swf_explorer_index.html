@@ -4,7 +4,10 @@
 {% block title %} Fe-V-Co hard magnetic thin films {% endblock title %}
 
 {% block extra_css %}
+<link rel="stylesheet" href='{% static "components/bootstrap/dist/css/bootstrap.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid/lib/backgrid.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-select-all/backgrid-select-all.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-filter/backgrid-filter.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/json-human/css/json.human.css" %}' charset="utf-8">
 {% endblock extra_css %}
 
@@ -287,7 +290,7 @@
         <div class="col-md-6">
             <div id="graph3"></div>
             <script>
-            requirejs(['main'], function() {
+            requirejs(['config'], function() {
                 require(["plotly"], function(Plotly) {
                     $(document).ready(function(){
                         var table = window.tables[window.tables.length-1];
