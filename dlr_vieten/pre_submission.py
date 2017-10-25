@@ -1,11 +1,13 @@
 #from mpcontribs.users.dlr_vieten.rest.rester import DlrVietenRester
 from mpcontribs.config import mp_level01_titles, mp_id_pattern
 from mpcontribs.io.core.utils import get_composition_from_string
+from mpcontribs.io.core.recdict import RecursiveDict
 import pandas as pd
 import csv
 
 def run(mpfile, dup_check_test_site=True):
 
+    from pymatgen import MPRester
     existing_identifiers = {}
     #for b in [False, True]:
     #    with DlrVietenRester(test_site=b) as mpr:
@@ -18,11 +20,12 @@ def run(mpfile, dup_check_test_site=True):
     google_sheet += '/export?format=xlsx'
     df_dct = pd.read_excel(google_sheet, sheetname=None)
 
+    mpr = MPRester()
     update = 0
     for sheet in df_dct.keys():
         print(sheet)
-
         df = df_dct[sheet]
+
         sheet_split = sheet.split()
         composition = sheet_split[0]
         identifier = get_composition_from_string(composition)
