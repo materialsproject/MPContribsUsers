@@ -4,6 +4,7 @@
 {% block title %} DTU {% endblock title %}
 
 {% block extra_css %}
+<link rel="stylesheet" href='{% static "components/bootstrap/dist/css/bootstrap.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid/lib/backgrid.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/json-human/css/json.human.css" %}' charset="utf-8">
 <link href="//db.onlinewebfonts.com/c/1a6abbd133be395c851e058cbcb2a80a?family=Symbola" rel="stylesheet" type="text/css"/>
@@ -65,7 +66,7 @@ requirejs(['config'], function() {
                 for (j = 0; j < keys.length; j++) {
                     var k = keys[j];
                     if (!(k in yvals)) {yvals[k] = [];}
-                    yvals[k].push(row[k]);
+                    yvals[k].push(row[k].split(' ')[0]);
                 }
             }
             var data = [];
