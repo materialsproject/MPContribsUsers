@@ -6,6 +6,9 @@
 {% block extra_css %}
 <link rel="stylesheet" href='{% static "components/bootstrap/dist/css/bootstrap.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid/lib/backgrid.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-paginator/backgrid-paginator.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-filter/backgrid-filter.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-grouped-columns/backgrid-grouped-columns.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/json-human/css/json.human.css" %}' charset="utf-8">
 <link href="//db.onlinewebfonts.com/c/1a6abbd133be395c851e058cbcb2a80a?family=Symbola" rel="stylesheet" type="text/css"/>
 {% endblock extra_css %}
@@ -25,8 +28,8 @@
 <style>
 .backgrid { font-family: "symbola"; }
 .backgrid tbody tr:hover { background-color: #f9f9f9; }
-.backgrid .string-cell { text-align: center; }
-.backgrid .uri-cell { text-align: center; }
+.backgrid .sortable { text-align: center; }
+.backgrid thead th button { display: inline; }
 .jh-root { font-family: "symbola"; }
 .jh-type-string { font-style: normal; }
 code { display: block; white-space: pre-wrap; }
@@ -66,7 +69,7 @@ requirejs(['config'], function() {
                 xaxis: {type: 'category'},
                 yaxis: {title: 'Energy (eV)'}
             };
-            var keys = ['C', 'indirect ΔE-QP', 'direct ΔE-QP'];
+            var keys = ['C', 'ΔE-QP##indirect', 'ΔE-QP##direct'];
             var xvals = []; var yvals = {};
             for (i = 0; i < table['rows'].length; i++) {
                 var row = table['rows'][i];
@@ -82,7 +85,14 @@ requirejs(['config'], function() {
             var data = [];
             for (j = 0; j < keys.length; j++) {
                 var k = keys[j];
-                var d = {x: xvals, y: yvals[k], type: 'bar', name: k};
+                var ks = k.split('##');
+                if ( ks.length > 1 ) {
+                    var name = ks[1] + ' ' + ks[0];
+                } else {
+                    var name = ks[0];
+                }
+
+                var d = {x: xvals, y: yvals[k], type: 'bar', name: name};
                 data.push(d);
             }
             Plotly.plot(graph, data, layout);

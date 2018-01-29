@@ -1,46 +1,61 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import os, gzip, json
 import numpy as np
 from pandas import DataFrame
 from mpcontribs.io.core.recdict import RecursiveDict
 from mpcontribs.io.core.utils import nest_dict
 from mpcontribs.users.boltztrap.rest.rester import BoltztrapRester
+from mpcontribs.users.utils import clean_value, duplicate_check
 
-def run(mpfile, nmax=1, dup_check_test_site=True):
+try:
+    from os import scandir # python3
+except ImportError:
+    from scandir import scandir
 
-    # book-keeping
-    existing_mpids = {}
-    for b in [False, True]:
-        with BoltztrapRester(test_site=b) as mpr:
-            for doc in mpr.query_contributions(criteria=mpr.query):
-                existing_mpids[doc['mp_cat_id']] = doc['_id']
-        if not dup_check_test_site:
-            break
+@duplicate_check
+def run(mpfile, **kwargs):
 
     # extract data from json files
     keys = ['pretty_formula', 'volume']
     input_dir = mpfile.hdata.general['input_dir']
-    for idx, fn in enumerate(os.listdir(input_dir)[::-1]):
-        mpid = fn.split('.', 1)[0].rsplit('_', 1)[1]
+    for idx, obj in enumerate(scandir(input_dir)):
+        mpid = obj.name.split('.', 1)[0].rsplit('_', 1)[1]
         print(mpid)
-        input_file = gzip.open(os.path.join(input_dir, fn), 'rb')
+        input_file = gzip.open(obj.path, 'rb')
         try:
             data = json.loads(input_file.read())
+
+            # filter out metals
+            if 'GGA' not in data['gap'] or data['gap']['GGA'] < 0.1:
+                print('GGA gap < 0.1 -> skip')
+                continue
 
             # add hierarchical data (nested key-values)
             # TODO: extreme values for power factor, zT, effective mass
             # TODO: add a text for the description of each table
             hdata = RecursiveDict((k, data[k]) for k in keys)
-            cond_eff_mass = u'mₑᶜᵒⁿᵈ'
+            hdata['volume'] = '{:g} Å³'.format(hdata['volume'])
+            cond_eff_mass = 'mₑᶜᵒⁿᵈ'
             hdata[cond_eff_mass] = RecursiveDict()
-            names = [u'ε₁', u'ε₂', u'ε₃', u'<ε>']
+            names = ['e₁', 'e₂', 'e₃', '<m>']
+            if 'GGA' not in data:
+                print('no GGA key for', mpid)
+                continue
             for dt, d in data['GGA']['cond_eff_mass'].items():
                 eff_mass = d['300']['1e+18']
                 eff_mass.append(np.mean(eff_mass))
                 hdata[cond_eff_mass][dt] = RecursiveDict(
-                    (names[idx], u'{:.4f} mₑ'.format(x))
+                    (names[idx], clean_value(x, 'mₑ'))
                     for idx, x in enumerate(eff_mass)
                 )
+            seebeck_fix_dop_temp = "Seebeck"
+            hdata[seebeck_fix_dop_temp] = RecursiveDict()
+            cols = ['e₁', 'e₂', 'e₃', 'temperature', 'doping']
+            for doping_type in ['p', 'n']:
+                sbk=[float(i) for i in data['GGA']['seebeck_doping'][doping_type]['300']['1e+18']['eigs']]
+                vals = [clean_value(s, 'μV/K') for s in sbk] + ['300 K', '10¹⁸ cm⁻³']
+                hdata[seebeck_fix_dop_temp][doping_type] = RecursiveDict((k, v) for k, v in zip(cols, vals))
 
             # build data and max values for seebeck, conductivity and kappa
             # max/min values computed using numpy. It may be better to code it in pure python.
@@ -67,7 +82,7 @@ def run(mpfile, nmax=1, dup_check_test_site=True):
                         for doping in dopings:
                             doping_str = '%.0e' % doping
                             if len(columns) <= len(dopings):
-                                columns.append(doping_str + u' cm⁻³')
+                                columns.append(doping_str + ' cm⁻³')
                             eigs = prop[str(temp)][doping_str]['eigs']
                             row.append(np.mean(eigs))
                         prop_averages.append(row)
@@ -81,9 +96,9 @@ def run(mpfile, nmax=1, dup_check_test_site=True):
                     arg_max = np.argwhere(arr_prop_avg==max_v)[0]
 
                     vals = [
-                        u'{} {}'.format(max_v, unit),
-                        u'{} K'.format(temps[arg_max[0]]),
-                        u'{} cm⁻³'.format(dopings[arg_max[1]])
+                        clean_value(max_v, unit),
+                        clean_value(temps[arg_max[0]], 'K'),
+                        clean_value(dopings[arg_max[1]], 'cm⁻³')
                     ]
                     hdata[lbl][doping_type] = RecursiveDict(
                         (k, v) for k, v in zip(cols, vals)
@@ -93,12 +108,5 @@ def run(mpfile, nmax=1, dup_check_test_site=True):
                 nest_dict(hdata, ['data']), identifier=data['mp_id']
             )
 
-            if mpid in existing_mpids:
-                cid = existing_mpids[mpid]
-                mpfile.insert_id(mpid, cid)
-                print cid, 'inserted to update', mpid
-
         finally:
             input_file.close()
-        if idx >= nmax-1:
-            break

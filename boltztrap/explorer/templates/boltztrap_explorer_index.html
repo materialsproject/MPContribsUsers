@@ -7,7 +7,9 @@
 <link rel="stylesheet" href='{% static "components/bootstrap/dist/css/bootstrap.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid/lib/backgrid.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid-select-all/backgrid-select-all.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-paginator/backgrid-paginator.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid-filter/backgrid-filter.css" %}' charset="utf-8">
+<link rel="stylesheet" href='{% static "components/backgrid-grouped-columns/backgrid-grouped-columns.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/json-human/css/json.human.css" %}' charset="utf-8">
 <link href="//db.onlinewebfonts.com/c/1a6abbd133be395c851e058cbcb2a80a?family=Symbola" rel="stylesheet" type="text/css"/>
 {% endblock extra_css %}
@@ -29,6 +31,7 @@
 .backgrid tbody tr:hover { background-color: #f9f9f9; }
 .jh-root { font-family: "symbola"; }
 .jh-type-string { font-style: normal; }
+code { display: block; white-space: pre-wrap; }
 </style>
 
 <div class="container">
@@ -37,6 +40,22 @@
         <h2>{{ title }}</h2>
         {{ provenance|safe }}
     </div>
+
+    <div class="row">
+        <h5>Python code to get the contributions from the BoltztrapRester</h5>
+        <code>
+            from mpcontribs.users.boltztrap.rest.rester import BoltztrapRester
+            mpr = BoltztrapRester()
+            for doping in ['n', 'p']:
+                df = mpr.get_contributions(doping=doping)
+        </code>
+    </div>
+
+    <div class="row">
+        <h4>Below, the eigenvalues of the Seebeck coefficient and the conductivity 
+        effective mass for a doping level of 10¹⁸ cm⁻³ at 300K are shown.</h4>
+    </div>
+
     {% for doping, table in tables.items %}
     <div class="row">
         <h3>{{ doping|safe }}-type</h3>

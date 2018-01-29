@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import os, urllib, ase.db
 from mpcontribs.io.core.recdict import RecursiveDict
 from mpcontribs.io.core.utils import nest_dict
@@ -7,21 +8,23 @@ from mpcontribs.users.utils import clean_value, duplicate_check
 @duplicate_check
 def run(mpfile, **kwargs):
 
-    url = mpfile.hdata['_hdata']['url']
-    dbfile = url.rsplit('/')[-1]
+    url = mpfile.hdata.general['url']
+    dbfile = os.path.join(os.environ['HOME'], 'work', url.rsplit('/')[-1])
 
     if not os.path.exists(dbfile):
         data = urllib.URLopener()
         data.retrieve(url, dbfile)
 
     con = ase.db.connect(dbfile)
+    nr_mpids = con.count(selection='mpid')
 
     for idx, row in enumerate(con.select('mpid')):
+        if idx and not idx%10:
+            print 'added', idx, '/', nr_mpids, 'materials'
         mpid = 'mp-' + str(row.mpid)
-        if mpid not in run.existing_identifiers:
-            continue
-
         d = RecursiveDict()
+        d['formula'] = row.formula
+        d['ICSD'] = str(row.icsd_id)
 
         # kohn-sham band gap
         d['ΔE-KS'] = RecursiveDict([
