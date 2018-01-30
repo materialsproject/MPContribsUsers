@@ -8,6 +8,7 @@ class BoltztrapRester(MPContribsRester):
     """Boltztrap-specific convenience functions to interact with MPContribs REST interface"""
     query = {'content.doi': '10.1038/sdata.2017.85'}
     provenance_keys = ['title', 'authors', 'journal', 'doi', 'url', 'remarks']
+    released = True
 
     def get_contributions(self, doping):
 
