@@ -11,7 +11,9 @@ from translate_vicalloy import get_translate
 
 def run(mpfile, nmax=None):
     #print json.dumps(mpfile.document, indent=4)
-    datasource = mpfile.document['general'].pop('Datasource')
+    print mpfile.document['_hdata'].keys()
+#    datasource = mpfile.document['general'].pop('Datasource')
+    datasource = mpfile.document['_hdata']['general'].pop('input_file')
     subdir = os.path.abspath(os.path.join(
         datasource['work_dir'], datasource['directory']
     ))

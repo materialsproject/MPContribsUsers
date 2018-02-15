@@ -1,56 +1,68 @@
-#from mpcontribs.users.dlr_vieten.rest.rester import DlrVietenRester
-from mpcontribs.config import mp_level01_titles, mp_id_pattern
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+import os
+from glob import glob
 from mpcontribs.io.core.utils import get_composition_from_string
 from mpcontribs.io.core.recdict import RecursiveDict
-import pandas as pd
-import csv
+from mpcontribs.io.core.utils import clean_value, read_csv, nest_dict
+from mpcontribs.io.core.components import Table
+from mpcontribs.users.utils import duplicate_check
 
-def run(mpfile, dup_check_test_site=True):
+@duplicate_check
+def run(mpfile, **kwargs):
+    # TODO clone solar_perovskite if needed, abort if insufficient permissions
+    from .solar_perovskite.core import GetExpThermo
 
-    from pymatgen import MPRester
-    existing_identifiers = {}
-    #for b in [False, True]:
-    #    with DlrVietenRester(test_site=b) as mpr:
-    #        for doc in mpr.query_contributions():
-    #            existing_identifiers[doc['mp_cat_id']] = doc['_id']
-    #    if not dup_check_test_site:
-    #        break
+    input_file = mpfile.hdata.general['input_file']
+    input_file = os.path.join(os.path.dirname(__file__), input_file)
+    table = read_csv(open(input_file, 'r').read().replace(';', ','))
+    dct = super(Table, table).to_dict(orient='records', into=RecursiveDict)
 
-    google_sheet = mpfile.document[mp_level01_titles[0]].pop('google_sheet')
-    google_sheet += '/export?format=xlsx'
-    df_dct = pd.read_excel(google_sheet, sheetname=None)
+    for row in dct:
 
-    mpr = MPRester()
-    update = 0
-    for sheet in df_dct.keys():
-        print(sheet)
-        df = df_dct[sheet]
+        d = RecursiveDict()
+        #d['full_composition'] = row['full_composition']
+        d['tolerance_factor'] = row['tolerance_factor']
+        d['solid_solution'] = row['type of solid solution']
+        d['oxidized_phase'] = RecursiveDict()
+        d['oxidized_phase']['composition'] = row['composition oxidized phase']
+        d['oxidized_phase']['crystal_structure'] = row['crystal structure (fully oxidized)']
+        d['reduced_phase'] = RecursiveDict()
+        d['reduced_phase']['composition'] = row['composition reduced phase']
+        d['reduced_phase']['closest_MP'] = row['closest phase MP (reduced)'].replace('n.a.', '')
+        d['Reference'] = row['Reference']
+        d['sample_number'] = row['sample_number']
 
-        sheet_split = sheet.split()
-        composition = sheet_split[0]
-        identifier = get_composition_from_string(composition)
-        if len(sheet_split) > 1 and mp_id_pattern.match(sheet_split[1]):
-            identifier = sheet_split[1]
-        print('identifier = {}'.format(identifier))
+        #d['oxidized_phase']['closest_MP'] = row['closest phase MP (oxidized)'].replace('n.a.', '')
+        # finish calculations for mp-id; fake until then ;)
+        composition = d['oxidized_phase']['composition']
+        identifier = get_composition_from_string(composition) # TODO oxidized phase mp-id
+        mpfile.add_hierarchical_data(
+            nest_dict(d, ['data']), identifier=identifier
+        )
 
-        if 'CIF' in sheet_split:
-            print('adding CIF ...')
-            df.columns = [df.columns[0]] + ['']*(df.shape[1]-1)
-            cif = df.to_csv(na_rep='', index=False, sep='\t', quoting=csv.QUOTE_NONE)
-            mpfile.add_structure(cif, identifier=identifier, fmt='cif')
+        sample_number = int(row['sample_number'])
+        exp_thermo = GetExpThermo(sample_number, plotting=False)
+        delta, dh, dh_err, x, dh_fit, extrapolate, abs_delta = exp_thermo.exp_dh()
+        df = Table(RecursiveDict([('δ', delta), ('ΔH', dh), ('ΔHₑᵣᵣ', dh_err)]))
+        mpfile.add_data_table(identifier, df, name='ΔHₒ')
 
-        else:
-            print('adding data ...')
-            mpfile.add_hierarchical_data({'composition': composition}, identifier=identifier)
-            mpfile.add_data_table(identifier, df, name='dH_dS')
+        delta, ds, ds_err, x, ds_fit, extrapolate, abs_delta = exp_thermo.exp_ds()
+        df = Table(RecursiveDict([('δ', delta), ('ΔS', ds), ('ΔSₑᵣᵣ', ds_err)]))
+        mpfile.add_data_table(identifier, df, name='ΔSₒ')
 
-        if identifier in existing_identifiers:
-            cid = existing_identifiers[identifier]
-            mpfile.insert_id(identifier, cid)
-            update += 1
+        #for path in glob('solar_perovskite/tga_results/ExpDat_JV_P_{}_*.csv'.format(sample_number)):
+        #    print path
+        #    body = open(path).read()
+        #    cols = ['Time [min]', 'Temperature [C]']#, 'dm [%]']#, 'pO2']
+        #    # TODO show secondary y-axes in graph if column values differ by more than an order of magnitude
+        #    table = read_csv(body, usecols=cols)#, skiprows=5)
+        #    table = Table(table[cols].iloc[::200, :])
+        #    print table.head()
+        #    mpfile.add_data_table(identifier, table, name='raw_data')
+        #    print mpfile.tdata[identifier]['raw_data']
+        #    break
 
-    print len(mpfile.ids), 'contributions to submit.'
-    if update > 0:
-        print update, 'contributions to update.'
 
 
+        print 'DONE'

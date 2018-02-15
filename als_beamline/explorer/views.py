@@ -1,6 +1,7 @@
-"""This module provides the views for the boltztrap explorer interface."""
+"""This module provides the views for the DTU explorer interface."""
 
-import os
+import json, os
+from bson import ObjectId
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from mpcontribs.rest.views import get_endpoint
@@ -12,18 +13,17 @@ def index(request):
     if request.user.is_authenticated():
         API_KEY = request.user.api_key
         ENDPOINT = request.build_absolute_uri(get_endpoint())
-        from ..rest.rester import BoltztrapRester
-        with BoltztrapRester(API_KEY, endpoint=ENDPOINT) as mpr:
+        from ..rest.rester import AlsBeamlineRester
+        with AlsBeamlineRester(API_KEY, endpoint=ENDPOINT) as mpr:
             try:
                 prov = mpr.get_provenance()
-                title = prov.pop('title')
-                provenance = render_dict(prov, webapp=True)
-                tables = {}
-                for doping in ['n', 'p']:
-                    df = mpr.get_contributions(doping=doping)
-                    tables[doping] = render_dataframe(df, webapp=True)
+                ctx['title'] = prov.pop('title')
+                ctx['provenance'] = render_dict(prov, webapp=True)
+                ctx['table'] = render_dataframe(mpr.get_contributions(), webapp=True)
+                for typ in ['XAS', 'XMCD']:
+                    ctx[typ] = render_plot(mpr.get_all_spectra(typ), webapp=True)
             except Exception as ex:
                 ctx.update({'alert': str(ex)})
     else:
         ctx.update({'alert': 'Please log in!'})
-    return render_to_response("boltztrap_explorer_index.html", locals(), ctx)
+    return render_to_response("als_beamline_explorer_index.html", ctx)

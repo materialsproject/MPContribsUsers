@@ -1,7 +1,7 @@
 {% extends "home/templates/base/header_footer.html" %}
 {% load staticfiles %}
 
-{% block title %} DTU {% endblock title %}
+{% block title %} GLLB-SC Bandgaps {% endblock title %}
 
 {% block extra_css %}
 <link rel="stylesheet" href='{% static "components/bootstrap/dist/css/bootstrap.css" %}' charset="utf-8">
@@ -10,7 +10,6 @@
 <link rel="stylesheet" href='{% static "components/backgrid-filter/backgrid-filter.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/backgrid-grouped-columns/backgrid-grouped-columns.css" %}' charset="utf-8">
 <link rel="stylesheet" href='{% static "components/json-human/css/json.human.css" %}' charset="utf-8">
-<link href="//db.onlinewebfonts.com/c/1a6abbd133be395c851e058cbcb2a80a?family=Symbola" rel="stylesheet" type="text/css"/>
 {% endblock extra_css %}
 
 {% block content %}
@@ -36,24 +35,33 @@ code { display: block; white-space: pre-wrap; }
 </style>
 
 <div class="container">
+    <a href="{% url 'mpcontribs_portal_index' %}">&laquo; Portal</a>
     <div class="row">
-        <h2>{{ title }}</h2>
-        {{ provenance|safe }}
+        <div class="col-md-12">
+            <h2>{{ title }}</h2>
+            {{ provenance|safe }}
+        </div>
     </div>
     <div class="row">
-        <code>
-            from mpcontribs.users.dtu.rest.rester import DtuRester
-            mpr = DtuRester()
-            mpr.get_contributions()
-        </code>
+        <div class="col-md-12">
+            <code>
+                from mpcontribs.users.dtu.rest.rester import DtuRester
+                mpr = DtuRester()
+                mpr.get_contributions()
+            </code>
+        </div>
     </div>
     <div class="row">
-        <h3>Overview</h3>
-        <div id="graph"></div>
+        <div class="col-md-12">
+            <h3>Overview</h3>
+            <div id="graph" style="width: 100%;"></div>
+        </div>
     </div>
     <div class="row">
-        <h3>Data</h3>
-        {{ table|safe }}
+        <div class="col-md-12">
+            <h3>Data</h3>
+            {{ table|safe }}
+        </div>
     </div>
 </div>
 
@@ -65,9 +73,10 @@ requirejs(['config'], function() {
             var table = window.tables[window.tables.length-1];
             var graph = document.getElementById('graph');
             var layout = {
-                margin: {t: 0}, barmode: 'stack',
-                xaxis: {type: 'category'},
-                yaxis: {title: 'Energy (eV)'}
+                margin: {t: 0, r: 0, l: 40}, barmode: 'stack',
+                xaxis: {type: 'category', showticklabels: false, ticks: ''},
+                yaxis: {title: 'Energy (eV)'},
+                legend: {x: 0.05, y: 0.95},
             };
             var keys = ['C [eV]', 'ΔE-QP##indirect [eV]', 'ΔE-QP##direct [eV]'];
             var xvals = []; var yvals = {};
@@ -97,6 +106,9 @@ requirejs(['config'], function() {
                 data.push(d);
             }
             Plotly.plot(graph, data, layout);
+            window.onresize = function() {
+                Plotly.Plots.resize(graph);
+            };
         });
     });
 });

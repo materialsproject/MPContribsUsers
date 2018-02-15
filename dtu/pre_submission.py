@@ -2,13 +2,13 @@
 from __future__ import unicode_literals
 import os, urllib, ase.db
 from mpcontribs.io.core.recdict import RecursiveDict
-from mpcontribs.io.core.utils import nest_dict
-from mpcontribs.users.utils import clean_value, duplicate_check
+from mpcontribs.io.core.utils import clean_value
+from mpcontribs.users.utils import duplicate_check
 
 @duplicate_check
 def run(mpfile, **kwargs):
 
-    url = mpfile.hdata.general['url']
+    url = mpfile.hdata.general['input_url']
     dbfile = os.path.join(os.environ['HOME'], 'work', url.rsplit('/')[-1])
 
     if not os.path.exists(dbfile):
@@ -21,29 +21,26 @@ def run(mpfile, **kwargs):
     for idx, row in enumerate(con.select('mpid')):
         if idx and not idx%10:
             print 'added', idx, '/', nr_mpids, 'materials'
+
         mpid = 'mp-' + str(row.mpid)
         d = RecursiveDict()
         d['formula'] = row.formula
         d['ICSD'] = str(row.icsd_id)
-
+        d['data'] = RecursiveDict()
         # kohn-sham band gap
-        d['ΔE-KS'] = RecursiveDict([
+        d['data']['ΔE-KS'] = RecursiveDict([
             ('indirect', clean_value(
                 row.gllbsc_ind_gap - row.gllbsc_disc, 'eV'
             )), ('direct', clean_value(
                 row.gllbsc_dir_gap - row.gllbsc_disc, 'eV'
             ))
         ])
-
-        # derivative discontinuity
-        d['C'] = clean_value(row.gllbsc_disc, 'eV')
-
         # quasi particle band gap
-        d['ΔE-QP'] = RecursiveDict([
+        d['data']['ΔE-QP'] = RecursiveDict([
             ('indirect', clean_value(row.gllbsc_ind_gap, 'eV')),
             ('direct', clean_value(row.gllbsc_dir_gap, 'eV'))
         ])
+        # derivative discontinuity
+        d['data']['C'] = clean_value(row.gllbsc_disc, 'eV')
 
-        mpfile.add_hierarchical_data(
-            nest_dict(d, ['data']), identifier=mpid
-        )
+        mpfile.add_hierarchical_data(d, identifier=mpid)
