@@ -31,11 +31,12 @@ class BoltztrapRester(MPContribsRester):
             contrib = mpfile.hdata[mp_id]
             cid_url = self.get_cid_url(doc)
 
-            row = [mp_id, cid_url, contrib['extra_data']['pretty_formula']]
-            row += [
-                contrib['data'][k].get(doping, {}).get(sk, '')
-                for k in keys for sk in subkeys
-            ]
+            if keys[0] in contrib['data'] and keys[1] in contrib['data']:
+                row = [mp_id, cid_url, contrib['extra_data']['pretty_formula']]
+                row += [
+                    contrib['data'][k].get(doping, {}).get(sk, '')
+                    for k in keys for sk in subkeys
+                ]
             data.append((mp_id, row))
 
         return Table.from_items(data, orient='index', columns=columns)
