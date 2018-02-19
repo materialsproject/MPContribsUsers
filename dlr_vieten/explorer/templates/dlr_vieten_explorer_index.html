@@ -72,7 +72,7 @@ code { display: block; white-space: pre-wrap; }
 </div>
 
 <script>
-requirejs(['main'], function() {
+requirejs(['config'], function() {
     require(["plotly", "backbone"], function(Plotly, Backbone) {
         $(document).ready(function(){
             Backbone.on('cellclicked', function(e) {
