@@ -91,7 +91,7 @@ code { display: block; white-space: pre-wrap; }
 </div>
 
 <script>
-requirejs(['main'], function() {
+requirejs(['config'], function() {
     require(["plotly", "bootstrap-slider"], function(Plotly) {
         $(document).ready(function(){
             $("[name*='_slider']").slider({}); 
