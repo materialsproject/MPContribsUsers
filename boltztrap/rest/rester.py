@@ -10,11 +10,7 @@ class BoltztrapRester(MPContribsRester):
     provenance_keys = ['title', 'authors', 'journal', 'urls', 'url', 'description']
     released = True
 
-    def get_contributions(self, doping):
-
-        dopings = ['n', 'p']
-        if doping not in dopings:
-            raise Exception('doping has to be n or p!')
+    def get_contributions(self):
 
         docs = self.query_contributions(projection={'_id': 1, 'mp_cat_id': 1, 'content': 1})
         if not docs:
@@ -22,7 +18,7 @@ class BoltztrapRester(MPContribsRester):
 
         data = []
         columns = ['##'.join(['general', sk]) for sk in ['mp-id', 'cid', 'formula']]
-        keys, subkeys = [u'mₑᶜᵒⁿᵈ', u"Seebeck"], [u"e₁", u"e₂", u"e₃"]
+        keys, subkeys = ['<mₑᶜᵒⁿᵈ>', '<S>', '<σ>', '<S²σ>'], ['n', 'p']
         columns += ['##'.join([k, sk]) for k in keys for sk in subkeys]
 
         for doc in docs:
@@ -31,12 +27,11 @@ class BoltztrapRester(MPContribsRester):
             contrib = mpfile.hdata[mp_id]
             cid_url = self.get_cid_url(doc)
 
-            if keys[0] in contrib['data'] and keys[1] in contrib['data']:
-                row = [mp_id, cid_url, contrib['extra_data']['pretty_formula']]
-                row += [
-                    contrib['data'][k].get(doping, {}).get(sk, '')
-                    for k in keys for sk in subkeys
-                ]
+            row = [mp_id, cid_url, contrib['extra_data']['pretty_formula']]
+            row += [
+                contrib['data'].get(k, {}).get(sk, 'n.a. mₑ')
+                for k in keys for sk in subkeys
+            ]
             data.append((mp_id, row))
 
         return Table.from_items(data, orient='index', columns=columns)

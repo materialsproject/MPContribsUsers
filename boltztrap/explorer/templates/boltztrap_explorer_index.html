@@ -31,42 +31,135 @@
 .backgrid tbody tr:hover { background-color: #f9f9f9; }
 .backgrid .sortable { text-align: center; }
 .backgrid thead th button { display: inline; }
+.backgrid tbody tr { cursor: pointer; } 
 .jh-root { font-family: "symbola"; }
 .jh-type-string { font-style: normal; }
 code { display: block; white-space: pre-wrap; }
+.backgrid tbody tr td:nth-child(n+6):nth-child(-n+9) { background-color: #d0efc9; }
 </style>
 
 <div class="container">
     <a href="{% url 'mpcontribs_portal_index' %}">&laquo; Portal</a>
 
     <div class="row">
-        <h2>{{ title }}</h2>
+        <div class="col-md-8">
+            <h2>{{ title }}</h2>
+        </div>
+        <div class="col-md-4">
+            <div class="bg-danger" style="padding: 5px;">
+                An example notebook to retrieve and interact with this data can be found
+                <a target="_blank"
+                   href="https://github.com/materialsproject/MPContribsUsers/blob/master/boltztrap/boltztrap.ipynb">here</a>.
+               It's easiest to run it on the <a target="_blank" href="https://jupyterhub.materialsproject.org">MP JupyterHub</a> 
+               (contact <a href="mailto:phuck@lbl.gov">Patrick Huck</a> to request access).
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
         {{ provenance|safe }}
     </div>
 
     <div class="row">
-        <h5>Python code to get the contributions from the BoltztrapRester</h5>
-        <code>
-            from mpcontribs.users.boltztrap.rest.rester import BoltztrapRester
-            mpr = BoltztrapRester()
-            for doping in ['n', 'p']:
-                df = mpr.get_contributions(doping=doping)
-        </code>
+        <div class="col-md-6">
+            <div id="graph" style="width: 100%;"></div>
+        </div>
+        <div class="col-md-6">
+            <div id="graph2" style="width: 100%;"></div>
+        </div>
+    </div>
+
+    <div class="row" style="margin-top: 10px;">
+        <div class="col-md-8">
+            <h3>average eigenvalues @ 300 K & 10¹⁸ cm⁻³</h3>
+        </div>
+        <div class="col-md-4">
+            <div class="bg-success" style="padding: 5px;">
+                Click a green cell to show/update
+                temperature and doping level dependence on the right above.
+            </div>
+        </div>
     </div>
 
     <div class="row">
-        <h5>Below, the eigenvalues of the Seebeck coefficient and the conductivity 
-        effective mass for a doping level of 10¹⁸ cm⁻³ at 300K are shown.</h5>
-    </div>
-
-    {% for doping, table in tables.items %}
-    <div class="row">
-        <h3>{{ doping|safe }}-type</h3>
         {{ table|safe }}
     </div>
-    {% endfor %}
 
 </div>
+
+<script>
+requirejs(['main'], function() {
+    require(["plotly"], function(Plotly) {
+        $(document).ready(function(){
+            var table = window.tables[window.tables.length-1];
+            var graph = document.getElementById('graph');
+
+            var xvals = []; var yvals = [];
+            var zvals = []; var text = [];
+            for (i = 0; i < table['rows'].length; i++) {
+                var row = table['rows'][i];
+                var mpid_split = row['general##mp-id'].split('/');
+                var mpid = mpid_split[mpid_split.length-1];
+                var dopings = ['n', 'p'];
+                for (var j = 0; j < dopings.length; j++) {
+                    text.push(mpid + ' / ' + dopings[j]);
+                    xvals.push(row['<σ>##' + dopings[j] + ' [(Ωms)⁻¹]']);
+                    yvals.push(row['<S>##' + dopings[j] + ' [μV/K]']);
+                    zvals.push(Math.log10(row['<S²σ>##' + dopings[j] + ' [μW/(cmK²s)]']));
+                }
+            }
+
+            var data = [{
+                x: xvals, y: yvals, mode: 'markers', text: text,
+                marker: {
+                    color: zvals, colorscale: 'Viridis',
+                    colorbar: {title: 'log(PF)'}
+                }
+            }];
+            var layout = {
+                xaxis: {title: '<σ> [(Ωms)⁻¹]', exponentformat: "power", type: 'log'},
+                yaxis: {title: '<S> [μV/K]'},
+                margin: {l: 50, b: 50, t: 20}
+            };
+            Plotly.newPlot(graph, data, layout);
+            window.onresize = function() {
+                Plotly.Plots.resize(graph);
+            };
+
+            Backbone.on('cellclicked', function(e) {
+                var row = $(e.currentTarget).parent();
+                var url = row.find("td:nth-child(2) > a").attr('href');
+                var cid = url.split('/').pop();
+                var classes = $(e.currentTarget).attr("class").split(' ');
+                var payload = JSON.stringify({name: classes[3] + ' ' + classes[4]});
+                $.ajax({
+                    type: 'POST',
+                    url: 'rest/' + cid,
+                    data: payload,
+                    dataType: "json",
+                    contentType: "application/json; charset=utf-8",
+                    success: function(data, textStatus, jqXHR) {
+                        if ( 'null' != data['response'] ) {
+                            var div = document.getElementById('graph2');
+                            Plotly.newPlot(div, [data['response']], {
+                                showLegend: false, margin: {l: 50, r: 0, b: 50, t: 20},
+                                xaxis: {type: 'log', title: 'doping level [cm⁻³]', exponentformat: "power"},
+                                yaxis: {title: 'temperature [K]'},
+                            });
+                            window.onresize = function() {
+                                Plotly.Plots.resize(div);
+                            };
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                });
+            }); 
+        });
+    });
+});
+</script>
 
 {% endif %}
 {% endblock %}
