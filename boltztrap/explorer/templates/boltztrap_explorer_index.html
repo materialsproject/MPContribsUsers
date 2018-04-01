@@ -63,6 +63,7 @@ code { display: block; white-space: pre-wrap; }
     <div class="row">
         <div class="col-md-6">
             <div id="graph" style="width: 100%;"></div>
+            <div id="spinner" ></div>
         </div>
         <div class="col-md-6">
             <div id="graph2" style="width: 100%;"></div>
@@ -70,13 +71,14 @@ code { display: block; white-space: pre-wrap; }
     </div>
 
     <div class="row" style="margin-top: 10px;">
-        <div class="col-md-8">
+        <div class="col-md-7">
             <h3>average eigenvalues @ 300 K & 10¹⁸ cm⁻³</h3>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-5">
             <div class="bg-success" style="padding: 5px;">
-                Click a green cell to show/update
-                temperature and doping level dependence on the right above.
+                Click a green cell to update the temperature and
+                doping level dependence above, and display the
+                according eigenvalues.
             </div>
         </div>
     </div>
@@ -89,42 +91,40 @@ code { display: block; white-space: pre-wrap; }
 
 <script>
 requirejs(['config'], function() {
-    require(["plotly"], function(Plotly) {
-        $(document).ready(function(){
-            var table = window.tables[window.tables.length-1];
-            var graph = document.getElementById('graph');
+    require(["plotly", "jquery.spin"], function(Plotly) {
+        $("#spinner").spin('small');
 
-            var xvals = []; var yvals = [];
-            var zvals = []; var text = [];
-            for (i = 0; i < table['rows'].length; i++) {
-                var row = table['rows'][i];
-                var mpid_split = row['general##mp-id'].split('/');
-                var mpid = mpid_split[mpid_split.length-1];
-                var dopings = ['n', 'p'];
-                for (var j = 0; j < dopings.length; j++) {
-                    text.push(mpid + ' / ' + dopings[j]);
-                    xvals.push(row['<σ>##' + dopings[j] + ' [(Ωms)⁻¹]']);
-                    yvals.push(row['<S>##' + dopings[j] + ' [μV/K]']);
-                    zvals.push(Math.log10(row['<S²σ>##' + dopings[j] + ' [μW/(cmK²s)]']));
+        $.ajax({
+            type: 'GET',
+            url: 'rest',
+            contentType: "application/json; charset=utf-8",
+            success: function(data, textStatus, jqXHR) {
+                var r = data['response'];
+                if ( 'null' != r ) {
+                    var graph = document.getElementById('graph');
+                    Plotly.newPlot(graph, [{
+                        x: r['<σ>'], y: r['<S>'], mode: 'markers', text: r['text'],
+                        type: 'scattergl', marker: {
+                            color: r['<S²σ>'], colorscale: 'Viridis',
+                            colorbar: {title: 'log(PF)'}
+                        }
+                    }], {
+                        xaxis: {title: 'σ [(Ωms)⁻¹]', exponentformat: "power", type: 'log'},
+                        yaxis: {title: 'S [μV/K]'},
+                        margin: {l: 60, b: 50, t: 20}
+                    });
+                    window.onresize = function() {
+                        Plotly.Plots.resize(graph);
+                    };
                 }
+                $('#spinner').spin(false);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
             }
+        });
 
-            var data = [{
-                x: xvals, y: yvals, mode: 'markers', text: text,
-                marker: {
-                    color: zvals, colorscale: 'Viridis',
-                    colorbar: {title: 'log(PF)'}
-                }
-            }];
-            var layout = {
-                xaxis: {title: '<σ> [(Ωms)⁻¹]', exponentformat: "power", type: 'log'},
-                yaxis: {title: '<S> [μV/K]'},
-                margin: {l: 50, b: 50, t: 20}
-            };
-            Plotly.newPlot(graph, data, layout);
-            window.onresize = function() {
-                Plotly.Plots.resize(graph);
-            };
+        $(document).ready(function(){
 
             Backbone.on('cellclicked', function(e) {
                 var row = $(e.currentTarget).parent();
@@ -140,11 +140,17 @@ requirejs(['config'], function() {
                     contentType: "application/json; charset=utf-8",
                     success: function(data, textStatus, jqXHR) {
                         if ( 'null' != data['response'] ) {
+                            var eigs = data['response']['eigs'];
+                            var annot = '<b>ε₁ = '+eigs[0]+'<br>ε₂ = '+eigs[1]+'<br>ε₃ = '+eigs[2]+'</b>';
                             var div = document.getElementById('graph2');
                             Plotly.newPlot(div, [data['response']], {
                                 showLegend: false, margin: {l: 50, r: 0, b: 50, t: 20},
                                 xaxis: {type: 'log', title: 'doping level [cm⁻³]', exponentformat: "power"},
                                 yaxis: {title: 'temperature [K]'},
+                                annotations: [{
+                                    xref: 'paper', yref: 'paper', x: 1.03, xanchor: 'left',
+                                    y: 0, yanchor: 'top', text: annot, showarrow: false
+                                }]
                             });
                             window.onresize = function() {
                                 Plotly.Plots.resize(div);
@@ -156,6 +162,9 @@ requirejs(['config'], function() {
                     }
                 });
             }); 
+
+            $(".backgrid > tbody > tr:first > td:nth-child(6)").click()
+
         });
     });
 });
