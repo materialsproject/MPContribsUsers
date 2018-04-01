@@ -53,10 +53,10 @@ code { display: block; white-space: pre-wrap; }
     <a href="{% url 'mpcontribs_portal_index' %}">&laquo; Portal</a>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-7">
             <h2>{{ title }}</h2>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-5">
             <div class="bg-danger" style="padding: 5px;">
                 An example notebook to retrieve and interact with this data can be found
                 <a target="_blank"
@@ -103,6 +103,10 @@ code { display: block; white-space: pre-wrap; }
 <script>
 requirejs(['config'], function() {
     require(["plotly", "json.human", "jquery.spin"], function(Plotly, JsonHuman) {
+        $('link[rel=stylesheet][href*="nucleus"]').remove();
+	$('.brand').addClass('navbar-brand').removeClass('brand');
+	$('.nav').addClass('navbar-nav');
+        $('img').height(40).css('margin-top', '-25px');
         $("#spinner").spin('small');
 
         $.ajax({
@@ -115,7 +119,7 @@ requirejs(['config'], function() {
                     var graph = document.getElementById('graph');
                     Plotly.newPlot(graph, [{
                         x: r['<σ>'], y: r['<S>'], mode: 'markers', text: r['text'],
-                        type: 'scattergl', marker: {
+                        type: 'scatter', marker: {
                             color: r['<S²σ>'], colorscale: 'Viridis',
                             colorbar: {title: 'log(PF)'}
                         }
