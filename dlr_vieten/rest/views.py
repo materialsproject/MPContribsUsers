@@ -36,11 +36,8 @@ def index(request, cid, db_type=None, mdb=None):
         elif request.method == 'POST':
             payload = json.loads(request.body)
             for k in keys:
-                payload[k]['rng'] = map(int, payload[k]['rng'].split(','))
-                if k == 'isoredox':
-                    payload[k]['iso'] = float(payload[k]['iso'])
-                else:
-                    payload[k]['iso'] = int(payload[k]['iso'])
+                payload[k]['rng'] = map(float, payload[k]['rng'].split(','))
+                payload[k]['iso'] = float(payload[k]['iso'])
 
         response = {}
         for k in keys:
@@ -80,9 +77,9 @@ def index(request, cid, db_type=None, mdb=None):
                 else:
                     try:
                         solutioniso = brentq(funciso_redox, a, b, args=args)
+                        resiso.append(pd.np.exp(solutioniso))
                     except ValueError:
-                        solutioniso = None # insufficient accuracy for ꪲδ/T combo
-                    resiso.append(pd.np.exp(solutioniso))
+                        resiso.append(None) # insufficient accuracy for ꪲδ/T combo
 
             x = list(pd.np.exp(x_val)) if k == 'isotherm' else list(x_val)
             response[k] = {'x': x, 'y': resiso}
