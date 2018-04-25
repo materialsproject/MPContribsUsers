@@ -21,7 +21,7 @@ def index(request, cid, db_type=None, mdb=None):
             elif not v[0].isalpha():
                 pars[k] = float(v)
 
-        keys = ['isotherm', 'isobar', 'isoredox']
+        keys = ['isotherm', 'isobar', 'isoredox']#, 'ellingham']
 
         if request.method == 'GET':
             payload = dict((k, {}) for k in keys)
@@ -31,6 +31,8 @@ def index(request, cid, db_type=None, mdb=None):
             payload['isobar']['rng'] = [600, 1000]
             payload['isoredox']['iso'] = 0.3
             payload['isoredox']['rng'] = [700, 1000]
+            #payload['ellingham']['iso'] = -5
+            #payload['ellingham']['rng'] = [600, 1000]
         elif request.method == 'POST':
             payload = json.loads(request.body)
             for k in keys:
@@ -58,11 +60,22 @@ def index(request, cid, db_type=None, mdb=None):
 
             for xv in x_val:
                 args = (iso, xv, pars)
+                if k == "isotherm": # for isotherms, pressure is variable and temperature is constant
+                    args = (xv, iso, pars)
                 if k != 'isoredox':
+                    solutioniso = 0
                     try:
                         solutioniso = brentq(funciso, a, b, args=args)
                     except ValueError:
-                        solutioniso = a if abs(funciso(a, *args)) < abs(funciso(b, *args)) else b
+                        new_a = a
+                        while new_a < 0.5:
+                            try:
+                                solutioniso = brentq(funciso, new_a, b, args=args)
+                            except ValueError:
+                                pass
+                            new_a += 0.05
+                        if solutioniso == 0:
+                            solutioniso = a if abs(funciso(a, *args)) < abs(funciso(b, *args)) else b
                     resiso.append(solutioniso)
                 else:
                     try:
